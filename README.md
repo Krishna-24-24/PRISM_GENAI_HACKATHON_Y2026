@@ -87,7 +87,7 @@ cd traceiq
 # Build and start the unified Docker containers
 docker-compose up --build
 ```
-*Note: Wait ~60s for the BGE-small dense index warm-up. The backend will serve on `http://localhost:8000` and the UI frontend will run (locally via Vite) on `http://localhost:5173`.*
+*Note: Wait ~60s for the BGE-small dense index warm-up. The backend will serve on `http://localhost:8080` and the UI frontend will run (locally via Vite) on `http://localhost:5173`.*
 
 ### Manual Local Dev Setup
 
