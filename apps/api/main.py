@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,12 +11,17 @@ from apps.api.exceptions import (
 )
 from apps.api.schemas import (
     CodeResult,
+    EvaluationResponse,
+    EvaluationRun,
     ExampleQueriesResponse,
     ExampleQuery,
     QueryProfileResponse,
     QuerySignals,
+    RepositoryListResponse,
+    RepositorySummary,
     SearchRequest,
     SearchResponse,
+    SystemStatus,
     TraceStep,
 )
 from src.config import settings
@@ -98,6 +103,143 @@ _EXAMPLE_QUERIES = [
 @app.get("/health")
 def health_check() -> Dict[str, str]:
     return {"status": "ok", "environment": settings.environment}
+
+
+def _index_dir_size(path) -> int:
+    from pathlib import Path
+
+    p = Path(path)
+    if not p.exists():
+        return 0
+    if p.is_file():
+        return p.stat().st_size
+    total = 0
+    for child in p.rglob("*"):
+        if child.is_file():
+            total += child.stat().st_size
+    return total
+
+
+def _ensure_chunks_loaded() -> tuple[list, Optional[str]]:
+    from apps.api.retriever_singleton import get_chunks, get_retriever
+
+    chunks = get_chunks()
+    if chunks:
+        return chunks, None
+    try:
+        get_retriever()
+        return get_chunks(), None
+    except Exception as exc:
+        return [], str(exc)
+
+
+@app.get("/api/system", response_model=SystemStatus)
+def system_status() -> SystemStatus:
+    from apps.api.retriever_singleton import FAISS_DIR, get_retriever
+
+    chunks, reason = _ensure_chunks_loaded()
+    index_ready = False
+    dense_top_k = bm25_top_k = symbol_top_k = None
+    try:
+        retriever = get_retriever()
+        index_ready = True
+        dense_top_k = retriever._config.dense_top_k
+        bm25_top_k = retriever._config.bm25_top_k
+        symbol_top_k = retriever._config.symbol_top_k
+        reason = None
+    except Exception as exc:
+        reason = str(exc)
+
+    repo_ids = sorted({c.repo_id for c in chunks if c.repo_id})
+    version_ids = sorted({c.version_id for c in chunks if c.version_id})
+    files = {c.file_path for c in chunks}
+
+    return SystemStatus(
+        status="ok" if index_ready else "degraded",
+        environment=settings.environment,
+        index_ready=index_ready,
+        index_path=FAISS_DIR,
+        chunk_count=len(chunks),
+        file_count=len(files),
+        index_size_bytes=_index_dir_size(FAISS_DIR),
+        current_repository=repo_ids[0] if repo_ids else (None if not chunks else "indexed-corpus"),
+        current_version=version_ids[0] if version_ids else None,
+        dense_top_k=dense_top_k,
+        bm25_top_k=bm25_top_k,
+        symbol_top_k=symbol_top_k,
+        reason=reason,
+    )
+
+
+@app.get("/api/repositories", response_model=RepositoryListResponse)
+def list_repositories() -> RepositoryListResponse:
+    from collections import defaultdict
+    from apps.api.retriever_singleton import FAISS_DIR
+
+    chunks, _ = _ensure_chunks_loaded()
+    grouped: dict[str, list] = defaultdict(list)
+    for chunk in chunks:
+        key = chunk.repo_id or "indexed-corpus"
+        grouped[key].append(chunk)
+
+    size = _index_dir_size(FAISS_DIR)
+    repos: list[RepositorySummary] = []
+    for repo_id, items in sorted(grouped.items()):
+        versions = sorted({c.version_id for c in items if c.version_id})
+        files = {c.file_path for c in items}
+        paths = sorted(files)
+        common = paths[0] if len(paths) == 1 else (paths[0].rsplit("/", 1)[0] if paths else "")
+        repos.append(
+            RepositorySummary(
+                repo_id=repo_id,
+                version=versions[0] if versions else "—",
+                files=len(files),
+                chunks=len(items),
+                status="Ready" if items else "Empty",
+                index_size_bytes=size if len(grouped) == 1 else 0,
+                path=common,
+            )
+        )
+    return RepositoryListResponse(repositories=repos)
+
+
+@app.get("/api/evaluation", response_model=EvaluationResponse)
+def evaluation_results() -> EvaluationResponse:
+    from pathlib import Path
+    import json
+
+    results_dir = Path(__file__).resolve().parents[2] / "results"
+    if not results_dir.exists():
+        return EvaluationResponse(available=False, results=[])
+
+    files = sorted(results_dir.glob("ablation_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not files:
+        return EvaluationResponse(available=False, results=[])
+
+    payload = json.loads(files[0].read_text(encoding="utf-8"))
+    runs: list[EvaluationRun] = []
+    for row in payload.get("results", []):
+        runs.append(
+            EvaluationRun(
+                configuration=row.get("configuration", "unknown"),
+                mrr=row.get("mrr"),
+                ndcg_at_10=row.get("ndcg@10"),
+                p50_latency_ms=row.get("p50_latency_ms"),
+                p95_latency_ms=row.get("p95_latency_ms"),
+                index_build_time_s=row.get("index_build_time_s"),
+                incremental_update_time_s=row.get("incremental_update_time_s"),
+                index_size_mb=row.get("index_size_mb"),
+                queries_evaluated=row.get("queries_evaluated"),
+            )
+        )
+    return EvaluationResponse(
+        available=True,
+        source=str(files[0].name),
+        timestamp=payload.get("timestamp"),
+        sample_queries=payload.get("sample_queries"),
+        corpus_size=payload.get("corpus_size"),
+        results=runs,
+    )
 
 
 # ---------------------------------------------------------------------------

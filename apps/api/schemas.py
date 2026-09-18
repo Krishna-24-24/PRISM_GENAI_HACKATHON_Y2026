@@ -81,3 +81,54 @@ class ExampleQuery(BaseModel):
 
 class ExampleQueriesResponse(BaseModel):
     examples: List[ExampleQuery]
+
+
+class SystemStatus(BaseModel):
+    status: str
+    environment: str
+    index_ready: bool
+    index_path: str
+    chunk_count: int
+    file_count: int
+    index_size_bytes: int
+    current_repository: Optional[str] = None
+    current_version: Optional[str] = None
+    dense_top_k: Optional[int] = None
+    bm25_top_k: Optional[int] = None
+    symbol_top_k: Optional[int] = None
+    reason: Optional[str] = None
+
+
+class RepositorySummary(BaseModel):
+    repo_id: str
+    version: str
+    files: int
+    chunks: int
+    status: str
+    index_size_bytes: int
+    path: str
+
+
+class RepositoryListResponse(BaseModel):
+    repositories: List[RepositorySummary]
+
+
+class EvaluationRun(BaseModel):
+    configuration: str
+    mrr: Optional[float] = None
+    ndcg_at_10: Optional[float] = None
+    p50_latency_ms: Optional[float] = None
+    p95_latency_ms: Optional[float] = None
+    index_build_time_s: Optional[float] = None
+    incremental_update_time_s: Optional[float] = None
+    index_size_mb: Optional[float] = None
+    queries_evaluated: Optional[int] = None
+
+
+class EvaluationResponse(BaseModel):
+    available: bool
+    source: Optional[str] = None
+    timestamp: Optional[str] = None
+    sample_queries: Optional[int] = None
+    corpus_size: Optional[int] = None
+    results: List[EvaluationRun] = []
