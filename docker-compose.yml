@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app/src
+      - ./apps:/app/apps
+      - ./configs:/app/configs
+      - ./data:/app/data
+    environment:
+      - TRACEIQ_ENV=development
