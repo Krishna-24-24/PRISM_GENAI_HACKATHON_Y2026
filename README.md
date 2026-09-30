@@ -3,7 +3,7 @@
 ### Adaptive Agentic Code Retrieval & Ranking Engine
 
 > **Samsung PRISM GenAI Hackathon 3rd Edition (2026–27) · Theme 01: Agentic Code Intelligence**  
-> **Evaluation Target:** CoIR AppsRetrieval — NDCG@10, MRR  
+> **Evaluation Target:** CoIR AppsRetrieval - NDCG@10, MRR  
 > **Core Constraint:** CPU-only inference · No code execution · No hallucination
 
 TRACEIQ is a code intelligence engine that retrieves and ranks relevant JavaScript functions and classes from large codebases given a natural-language query. It parses JavaScript repositories into structured, symbol-level chunks using Tree-sitter ASTs, indexes them across three retrieval channels (dense semantic, BM25 lexical, and identifier lookup), and routes each query adaptively through a deterministic classifier — all without executing code or calling an LLM.
@@ -46,7 +46,7 @@ TRACEIQ is a code intelligence engine that retrieves and ranks relevant JavaScri
 
 ## 1. Overview
 
-TRACEIQ is a **retrieval engine, not a chatbot**. Given a natural-language query, it returns ranked JavaScript code snippets — functions, methods, classes — from an indexed codebase. It does not synthesize, explain, or execute code.
+TRACEIQ is a **retrieval engine, not a chatbot**. Given a natural-language query, it returns ranked JavaScript code snippets - functions, methods, classes from an indexed codebase. It does not synthesize, explain, or execute code.
 
 **What goes in:** A natural-language string describing what a piece of code does. Examples:
 - `"function that validates and sanitizes user form input"`
@@ -124,7 +124,7 @@ Given a large JavaScript repository (thousands of functions, hundreds of files),
 
 4. **Context-window limitations.** A large JavaScript repo may contain tens of thousands of functions. You cannot send them all to an LLM. You need a retrieval layer that selects the right ~10 before any generative step.
 
-5. **Code versioning.** Codebases change. If 5% of functions are modified between versions, you should not re-embed the entire corpus — that is a full rebuild every commit. Efficient incremental updates are a first-class engineering requirement.
+5. **Code versioning.** Codebases change. If 5% of functions are modified between versions, you should not re-embed the entire corpus that is a full rebuild every commit. Efficient incremental updates are a first-class engineering requirement.
 
 6. **Latency budgets.** A retrieval engine that takes 3+ seconds per query (e.g., a CPU-bound cross-encoder over 50 pairs) is not deployable. Components must be profiled and cut if they violate the budget without improving recall.
 
@@ -335,7 +335,7 @@ flowchart LR
 | Max file size | 1MB (1,048,576 bytes) | `scanner.py` size guard |
 | Arrow function filter | Skip if parent is `call_expression` | `parser.py` lines 122–124 |
 
-**Syntax error handling:** Tree-sitter is error-tolerant. It will parse files with syntax errors and still extract valid nodes from regions that parse cleanly. Error nodes are skipped silently — no exception is raised per file.
+**Syntax error handling:** Tree-sitter is error-tolerant. It will parse files with syntax errors and still extract valid nodes from regions that parse cleanly. Error nodes are skipped silently, no exception is raised per file.
 
 **Arrow function filtering:** Arrow functions used as direct arguments to call expressions (`.map(x => ...)`, `.filter(...)`) are excluded. Only arrow functions assigned to variables or used standalone are indexed, preventing thousands of trivial inline callbacks from polluting the index.
 
@@ -411,7 +411,7 @@ CodeChunk {
 **Model:** `BAAI/bge-small-en-v1.5` (33M parameters, 384-dim embeddings) via `sentence-transformers`.
 
 Model choice rationale (from `embedder.py` docstring):
-- 384-dim — fits in CPU L3 cache during inference
+- 384-dim - fits in CPU L3 cache during inference
 - Measured ~80–120ms per batch of 32 on a modern laptop CPU
 - `EmbeddingProvider` abstract interface allows any model (UniXcoder, CodeSage, jina-v2) to be swapped by implementing a new subclass
 
@@ -788,7 +788,7 @@ Incremental update produces identical retrieval quality to a fresh rebuild (asse
 
 > **Important:** The API requires a pre-built FAISS index at `data/faiss_index/index.faiss`. Build it by running the ablation benchmark first (see §20), or provide a FAISS index built from your own JavaScript corpus.
 
-### Option A — Docker (Backend API only)
+### Option A - Docker (Backend API only)
 
 ```bash
 git clone <repo-url> traceiq
@@ -808,7 +808,7 @@ The Docker image:
 
 > **Wait ~60 seconds** for BGE-small to load and warm up on first startup.
 
-### Option B — Manual Local Setup
+### Option B - Manual Local Setup
 
 **Backend API:**
 
