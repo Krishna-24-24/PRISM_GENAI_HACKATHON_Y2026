@@ -67,6 +67,32 @@ TRACEIQ is a **retrieval engine, not a chatbot**. Given a natural-language query
 | Latency | LLM-in-the-loop (seconds) | Pure CPU: 222ms P50 (dense-only fast path) |
 | Reranking | Cross-encoder always on | Cross-encoder available but ablated off (16x latency, 0 NDCG gain) |
 
+Architecture Pipeline
+
+```mermaid
+flowchart TD
+    Q[Natural Language Query] --> A(Query Analyzer: Deterministic Routing)
+    A -->|semantic| D[Dense Retrieval FAISS]
+    A -->|structural| B[BM25 Lexical]
+    A -->|symbolic| S[Symbol Lookup]
+    
+    D --> F{Weighted RRF Fusion}
+    B --> F
+    S --> F
+    
+    F --> SB[Structural Graph Boost]
+    SB --> R[Final Top-K Snippets]
+    
+    style Q fill:#1b1f2b,stroke:#363d57,color:#fff
+    style A fill:#242840,stroke:#3b82f6,color:#e8eaf2
+    style D fill:#1428a0,stroke:#2540d4,color:#fff
+    style B fill:#f59e0b,stroke:#b45309,color:#fff
+    style S fill:#a855f7,stroke:#7e22ce,color:#fff
+    style F fill:#1e2230,stroke:#363d57,color:#fff
+    style SB fill:#1e2230,stroke:#363d57,color:#fff
+    style R fill:#10b981,stroke:#047857,color:#fff
+```
+
 **High-level pipeline:**
 
 ```mermaid

@@ -37,3 +37,9 @@ line_length = 100
 minversion = "6.0"
 addopts = "-ra -q"
 testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore:.*StarletteDeprecationWarning.*:",
+    "ignore:.*testclient.*:",
+]
