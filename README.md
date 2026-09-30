@@ -86,7 +86,7 @@ flowchart TD
 
 ## 2. The Problem
 
-The Samsung PRISM Theme 01 challenge defines the following scenario: given a large JavaScript repository (thousands of functions, hundreds of files), and a natural-language query from a developer, retrieve the most relevant code snippet.
+Given a large JavaScript repository (thousands of functions, hundreds of files), and a natural-language query from a developer, retrieve the most relevant code snippet.
 
 **Why this is hard:**
 
